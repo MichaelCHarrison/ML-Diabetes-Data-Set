@@ -1,0 +1,212 @@
+---
+title: "ML Pima Indians Diabetes"
+author: "Michael Harrison"
+date: "May 2, 2017"
+output: html_document
+---
+
+# Load Libraries and data
+```{r}
+library(caret)
+library(mlbench)
+library(corrplot)
+library(e1071)
+library(parallel)
+library(doParallel)
+data("PimaIndiansDiabetes")
+```
+#Dataset dimensions
+```{r}
+dim(PimaIndiansDiabetes)
+```
+#Partition dataset 
+```{r}
+inTrain <- createDataPartition(PimaIndiansDiabetes$diabetes, p=0.80, list=FALSE)
+training <- PimaIndiansDiabetes[inTrain,]
+testing <- PimaIndiansDiabetes[-inTrain,]
+dim(training)
+```
+```{r}
+sapply(training, class)
+```
+```{r}
+head(training)
+```
+```{r}
+summary(training)
+```
+#Class distribution
+```{r}
+cbind(freq = table(training$diabetes), percentage = prop.table(table(training$diabetes)))
+```
+# Checking for attribute correlation
+```{r}
+cor(training[,1:8])
+```
+
+#Data Visualiztion
+- Attribute histogram
+```{r}
+par(mfrow = c(2,4))
+for(i in 1:8){
+        hist(training[,i], main = names(training)[i], xlab = names(training)[i])
+}
+```
+# Attribute Density
+```{r}
+par(mfrow = c(2,4))
+for(i in 1:8){
+        plot(density(training[,i]), main = names(training)[i], xlab = names(training)[i])
+}
+```
+# Skew check
+```{r}
+apply(training[,1:8], 2, skewness)
+```
+
+#Box and Whisker
+```{r}
+par(mfrow = c(2,4))
+for(i in 1:8){
+        boxplot(training[,i], main = names(training)[i], xlab = names(training)[i])
+}
+```
+
+#Correlation Plot
+```{r}
+correlations <- cor(training[,1:8])
+corrplot(correlations)
+```
+
+```{r}
+pairs(diabetes~., data=training, col=training$diabetes)
+```
+#Class wise density plot
+```{r}
+scales <- list(x = list(relation = "free"), y = list(relation = "free"))
+featurePlot(x = training[,1:8], y = training[,9],
+            plot="density", scales = scales)
+```
+#Box and Whiskey by Class
+```{r}
+featurePlot(x = training[,1:8], y = training[,9], 
+            plot = "box", col = training$diabetes)
+```
+
+#Training Harness
+```{r}
+seed <- set.seed(13)
+fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+metric <- "Accuracy"
+```
+
+
+#Baseline Algorithm Suite
+```{r}
+#General Linearized Model
+set.seed(seed)
+fitGLM <- train(diabetes~., data = training, 
+             method = "glm", metric = metric,
+             trControl = fitControl)
+#General Linearized Model 
+set.seed(seed)
+fitGLMNET <- train(diabetes~., data = training, 
+             method = "glmnet", metric = metric,
+             trControl = fitControl)
+#Bayesian Generalized Linear Model
+set.seed(seed)
+fitBGLM <- train(diabetes~., data = training, 
+             method = "bayesglm", metric = metric,
+             trControl = fitControl)
+#Support Vector Machines w/ Radial Basis Function
+set.seed(seed)
+fitSVM <- train(diabetes~., data = training, 
+             method = "svmRadial", metric = metric,
+             trControl = fitControl)
+#Support Vector Machines w/ Class Weights
+set.seed(seed)
+fitCWSVM <- train(diabetes~., data = training, 
+             method = "svmRadialWeights", metric = metric,
+             trControl = fitControl)
+#Least Squares Support Vector Machines with Radial Basis Function
+set.seed(seed)
+fitLSSVM <- train(diabetes~., data = training, 
+             method = "lssvmRadial", metric = metric,
+             trControl = fitControl)
+#Naive Bayes
+set.seed(seed)
+fitNB <- train(diabetes~., data = training, 
+             method = "nb", metric = metric,
+             trControl = fitControl)
+
+results <- resamples(list(GLM = fitGLM,
+                          GLMNET = fitGLMNET,
+                          BGLM = fitBGLM,
+                          SVM = fitSVM,
+                          CWSVM = fitCWSVM,
+                          LSSVM = fitLSSVM,
+                          NB = fitNB))
+
+dotplot(results, scales = scales)
+```
+```{r}
+summary(results)
+```
+
+# Rerun w/ BoxCox transformation
+```{r}
+
+
+#General Linearized Model
+set.seed(seed)
+fitGLM <- train(diabetes~., data = training, 
+             method = "glm", metric = metric,
+             preProc = c("BoxCox"),
+             trControl = fitControl)
+#General Linearized Model 
+set.seed(seed)
+fitGLMNET <- train(diabetes~., data = training, 
+             method = "glmnet", metric = metric,
+             preProc = c("BoxCox"),
+             trControl = fitControl)
+#Bayesian Generalized Linear Model
+set.seed(seed)
+fitBGLM <- train(diabetes~., data = training, 
+             method = "bayesglm", metric = metric,
+             preProc = c("BoxCox"),
+             trControl = fitControl)
+#Support Vector Machines w/ Radial Basis Function
+set.seed(seed)
+fitSVM <- train(diabetes~., data = training, 
+             method = "svmRadial", metric = metric,
+             preProc = c("BoxCox"),
+             trControl = fitControl)
+#Support Vector Machines w/ Class Weights
+set.seed(seed)
+fitCWSVM <- train(diabetes~., data = training, 
+             method = "svmRadialWeights", metric = metric,
+             preProc = c("BoxCox"),
+             trControl = fitControl)
+#Least Squares Support Vector Machines with Radial Basis Function
+set.seed(seed)
+fitLSSVM <- train(diabetes~., data = training, 
+             method = "lssvmRadial", metric = metric,
+             preProc = c("BoxCox"),
+             trControl = fitControl)
+#Naive Bayes
+set.seed(seed)
+fitNB <- train(diabetes~., data = training, 
+             method = "nb", metric = metric,
+             preProc = c("BoxCox"),
+             trControl = fitControl)
+
+results <- resamples(list(GLM = fitGLM,
+                          GLMNET = fitGLMNET,
+                          BGLM = fitBGLM,
+                          SVM = fitSVM,
+                          CWSVM = fitCWSVM,
+                          LSSVM = fitLSSVM,
+                          NB = fitNB))
+
+dotplot(results, scales = scales)
+```
