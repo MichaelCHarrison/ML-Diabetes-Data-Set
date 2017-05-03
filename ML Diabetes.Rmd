@@ -147,15 +147,17 @@ results <- resamples(list(GLM = fitGLM,
                           LSSVM = fitLSSVM,
                           NB = fitNB))
 
-dotplot(results, scales = scales)
+dotplot(results, scales = scales, main = "Baseline")
 ```
 ```{r}
 summary(results)
 ```
 
-# Rerun w/ BoxCox transformation
+# Algorithm Suite w/ Preprocessing: BoxCox
 ```{r}
-
+#Engage parallel processing
+cluster <- makeCluster(detectCores()-1)
+registerDoParallel(cluster)
 
 #General Linearized Model
 set.seed(seed)
@@ -200,7 +202,11 @@ fitNB <- train(diabetes~., data = training,
              preProc = c("BoxCox"),
              trControl = fitControl)
 
-results <- resamples(list(GLM = fitGLM,
+#Disengage parallel processing
+stopCluster(cluster)
+registerDoSEQ()
+
+transformResults <- resamples(list(GLM = fitGLM,
                           GLMNET = fitGLMNET,
                           BGLM = fitBGLM,
                           SVM = fitSVM,
@@ -208,5 +214,227 @@ results <- resamples(list(GLM = fitGLM,
                           LSSVM = fitLSSVM,
                           NB = fitNB))
 
-dotplot(results, scales = scales)
+dotplot(transformResults, scales = scales, main = "Transform1: BoxCox")
 ```
+```{r}
+summary(transformResults)
+```
+
+#Algorithm Suite w/ Preprocessing: center, scale, BoxCox
+```{r}
+#Engage parallel processing
+cluster <- makeCluster(detectCores()-1)
+registerDoParallel(cluster)
+
+#General Linearized Model
+set.seed(seed)
+fitGLM <- train(diabetes~., data = training, 
+             method = "glm", metric = metric,
+             preProc = c("center", "scale", "BoxCox"),
+             trControl = fitControl)
+#General Linearized Model 
+set.seed(seed)
+fitGLMNET <- train(diabetes~., data = training, 
+             method = "glmnet", metric = metric,
+             preProc = c("center", "scale", "BoxCox"),
+             trControl = fitControl)
+#Bayesian Generalized Linear Model
+set.seed(seed)
+fitBGLM <- train(diabetes~., data = training, 
+             method = "bayesglm", metric = metric,
+             preProc = c("center", "scale", "BoxCox"),
+             trControl = fitControl)
+#Support Vector Machines w/ Radial Basis Function
+set.seed(seed)
+fitSVM <- train(diabetes~., data = training, 
+             method = "svmRadial", metric = metric,
+             preProc = c("center", "scale", "BoxCox"),
+             trControl = fitControl)
+#Support Vector Machines w/ Class Weights
+set.seed(seed)
+fitCWSVM <- train(diabetes~., data = training, 
+             method = "svmRadialWeights", metric = metric,
+             preProc = c("center", "scale", "BoxCox"),
+             trControl = fitControl)
+#Least Squares Support Vector Machines with Radial Basis Function
+set.seed(seed)
+fitLSSVM <- train(diabetes~., data = training, 
+             method = "lssvmRadial", metric = metric,
+             preProc = c("center", "scale", "BoxCox"),
+             trControl = fitControl)
+#Naive Bayes
+set.seed(seed)
+fitNB <- train(diabetes~., data = training, 
+             method = "nb", metric = metric,
+             preProc = c("center", "scale", "BoxCox"),
+             trControl = fitControl)
+
+#Disengage parallel processing
+stopCluster(cluster)
+registerDoSEQ()
+
+transform2Results <- resamples(list(GLM = fitGLM,
+                          GLMNET = fitGLMNET,
+                          BGLM = fitBGLM,
+                          SVM = fitSVM,
+                          CWSVM = fitCWSVM,
+                          LSSVM = fitLSSVM,
+                          NB = fitNB))
+
+dotplot(transform2Results, scales = scales, main = "Transform2: Center, Scale, BoxCox")
+```
+
+```{r}
+summary(transform2Results)
+```
+
+# Algorithm Suite w/ Preproceesing: center, scale
+```{r}
+#Engage parallel processing
+cluster <- makeCluster(detectCores()-1)
+registerDoParallel(cluster)
+
+#General Linearized Model
+set.seed(seed)
+fitGLM <- train(diabetes~., data = training, 
+             method = "glm", metric = metric,
+             preProc = c("center", "scale"),
+             trControl = fitControl)
+#General Linearized Model 
+set.seed(seed)
+fitGLMNET <- train(diabetes~., data = training, 
+             method = "glmnet", metric = metric,
+             preProc = c("center", "scale"),
+             trControl = fitControl)
+#Bayesian Generalized Linear Model
+set.seed(seed)
+fitBGLM <- train(diabetes~., data = training, 
+             method = "bayesglm", metric = metric,
+             preProc = c("center", "scale"),
+             trControl = fitControl)
+#Support Vector Machines w/ Radial Basis Function
+set.seed(seed)
+fitSVM <- train(diabetes~., data = training, 
+             method = "svmRadial", metric = metric,
+             preProc = c("center", "scale"),
+             trControl = fitControl)
+#Support Vector Machines w/ Class Weights
+set.seed(seed)
+fitCWSVM <- train(diabetes~., data = training, 
+             method = "svmRadialWeights", metric = metric,
+             preProc = c("center", "scale"),
+             trControl = fitControl)
+#Least Squares Support Vector Machines with Radial Basis Function
+set.seed(seed)
+fitLSSVM <- train(diabetes~., data = training, 
+             method = "lssvmRadial", metric = metric,
+             preProc = c("center", "scale"),
+             trControl = fitControl)
+#Naive Bayes
+set.seed(seed)
+fitNB <- train(diabetes~., data = training, 
+             method = "nb", metric = metric,
+             preProc = c("center", "scale"),
+             trControl = fitControl)
+
+#Disengage parallel processing
+stopCluster(cluster)
+registerDoSEQ()
+
+transform3Results <- resamples(list(GLM = fitGLM,
+                          GLMNET = fitGLMNET,
+                          BGLM = fitBGLM,
+                          SVM = fitSVM,
+                          CWSVM = fitCWSVM,
+                          LSSVM = fitLSSVM,
+                          NB = fitNB))
+
+dotplot(transform3Results, scales = scales, main = "Transform3: Center, Scale")
+```
+```{r}
+summary(transform3Results)
+```
+
+
+#Algorithm Tuning
+-Tuning Harness
+```{r}
+fitControl <- trainControl(method = "repeatedcv", number = 10, repeats =3)
+metric <- "Accuracy"
+```
+
+
+-GLMNET, no transform 
+```{r}
+#General Linearized Model 
+set.seed(seed)
+fitGLMNET0 <- train(diabetes~., data = training, 
+             method = "glmnet", metric = metric,
+             trControl = fitControl)
+fitGLMNET0
+```
+```{r}
+grid <- expand.grid(.alpha = seq(.4, 1, by = .05),
+                    .lambda = c(0.0004548649, 0.0045486487, 0.0454864867))
+set.seed(seed)
+tuneGLMNET <- train(diabetes~., data = training, 
+             method = "glmnet", metric = metric,
+             tuneGrid = grid,
+             trControl = fitControl)
+plot(tuneGLMNET)
+```
+```{r}
+tuneGLMNET$bestTune
+```
+
+
+-CWSVM, transform1 (center, scale, BoxCox)
+```{r}
+set.seed(seed)
+fitCWSVM1 <- train(diabetes~., data = training, 
+             method = "svmRadialWeights", metric = metric,
+             preProc = c("center", "scale", "BoxCox"),
+             trControl = fitControl)
+fitCWSVM1
+```
+```{r}
+grid <- expand.grid(.sigma = 0.1155233,
+                    .C = seq(.30, .70, by = .05),
+                    .Weight = c(1,2,3))
+set.seed(seed)
+tuneCWSVM <- train(diabetes~., data = training, 
+             method = "svmRadialWeights", metric = metric,
+             tuneGrid = grid,
+             preProc = c("center", "scale", "BoxCox"),
+             trControl = fitControl)
+plot(tuneCWSVM)
+```
+```{r}
+tuneCWSVM
+```
+
+
+
+-LSSVM, no transform
+```{r}
+set.seed(seed)
+fitLSSVM0 <- train(diabetes~., data = training, 
+             method = "lssvmRadial", metric = metric,
+             trControl = fitControl)
+fitLSSVM0
+```
+
+```{r}
+grid <- expand.grid(.sigma = seq(.03, .3, by = .1),
+                    .tau = seq(.1, .24, by = .02))
+set.seed(seed)
+tuneLSSVM <- train(diabetes~., data = training, 
+             method = "lssvmRadial", metric = metric,
+             tuneGrid = grid,
+             trControl = fitControl)
+plot(tuneLSSVM)
+```
+```{r}
+tuneLSSVM
+```
+
