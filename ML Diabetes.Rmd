@@ -153,6 +153,7 @@ dotplot(results, scales = scales, main = "Baseline")
 summary(results)
 ```
 
+
 # Algorithm Suite w/ Preprocessing: BoxCox
 ```{r}
 #Engage parallel processing
@@ -436,5 +437,97 @@ plot(tuneLSSVM)
 ```
 ```{r}
 tuneLSSVM
+```
+
+- Tuned GLMNET model provides highest accuracy on the training set: 0.7864622
+- Will try a suite of ensemble methods to compare GLMNET against to find most accurate model to asses the test set
+
+#Ensemble Methods
+
+```{r}
+#Bagged CART
+set.seed(seed)
+fitTREEBAG <- train(diabetes~., data = training, 
+                    method = "treebag", metric = metric,
+                    trControl = fitControl, na.action = na.omit)
+#Random Forest
+set.seed(seed)
+fitRF <- train(diabetes~., data = training,
+               method = "rf", metric = metric,
+               trControl = fitControl, na.action = na.omit)
+#Stachastic Gradient Boosting
+set.seed(seed)
+fitGBM <- train(diabetes~., data = training,
+                method = "gbm", metric = metric,
+                trControl = fitControl, verbose = FALSE, na.action = na.omit)
+#C5.0
+set.seed(seed)
+fitC5.0 <- train(diabetes~., data = training,
+                method = "C5.0", metric = metric,
+                trControl = fitControl, na.action = na.omit)
+
+ensembleResults <- resamples(list(TREEBAG = fitTREEBAG,
+                                  RF = fitRF,
+                                  GBM = fitGBM,
+                                  C5.0 = fitC5.0))
+dotplot(ensembleResults, scales = scales, main = "Ensemble Results")
+```
+```{r}
+summary(ensembleResults)
+```
+
+```{r}
+#Bagged CART
+set.seed(seed)
+fitTREEBAG <- train(diabetes~., data = training, 
+                    method = "treebag", metric = metric,
+                    preProc = c("BoxCox"),
+                    trControl = fitControl, na.action = na.omit)
+#Random Forest
+set.seed(seed)
+fitRF <- train(diabetes~., data = training,
+               method = "rf", metric = metric,
+               preProc = c("BoxCox"),
+               trControl = fitControl, na.action = na.omit)
+#Stachastic Gradient Boosting
+set.seed(seed)
+fitGBM <- train(diabetes~., data = training,
+                method = "gbm", metric = metric,
+                preProc = c("BoxCox"),
+                trControl = fitControl, verbose = FALSE, na.action = na.omit)
+#C5.0
+set.seed(seed)
+fitC5.0 <- train(diabetes~., data = training,
+                method = "C5.0", metric = metric,
+                preProc = c("BoxCox"),
+                trControl = fitControl, na.action = na.omit)
+
+ensembleTransform <- resamples(list(TREEBAG = fitTREEBAG,
+                                  RF = fitRF,
+                                  GBM = fitGBM,
+                                  C5.0 = fitC5.0))
+dotplot(ensembleTransform, scales = scales, 
+        main = "Ensemble Results: BoxCox Transformation")
+```
+```{r}
+summary(ensembleTransform)
+```
+
+#Finalize Model
+- GLMNET on unprocessed dataset provided the highest accuracy amongst algorithms tested, with parameters:
+```{r}
+tuneGLMNET$bestTune
+```
+
+```{r}
+set.seed(seed)
+predictions <- predict(tuneGLMNET, testing)
+confusionMatrix(predictions, testing$diabetes)
+```
+
+```{r}
+set.seed(seed)
+predictions2 <- predict(fitGBM, testing)
+confusionMatrix(predictions2, testing$diabetes)
 ```
 
